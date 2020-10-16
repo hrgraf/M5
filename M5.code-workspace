@@ -11,6 +11,9 @@
         },
         {
             "path": "AtomLedSet"
+        },
+        {
+            "path": "BleGamePad"
         }
     ],
     "settings": {}
