@@ -14,6 +14,9 @@
         },
         {
             "path": "BleGamePad"
+        },
+        {
+            "path": "BleKeyboard"
         }
     ],
     "settings": {}
