@@ -17,6 +17,9 @@
         },
         {
             "path": "BleKeyboard"
+        },
+        {
+            "path": "Wiimote"
         }
     ],
     "settings": {}
