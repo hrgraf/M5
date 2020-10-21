@@ -13,7 +13,7 @@ void setup()
     
     wiimote.init();
     if (! logging)
-        wiimote.addFilter(ACTION_IGNORE, FILTER_NUNCHUK_ACCEL); // optional
+        wiimote.addFilter(ACTION_IGNORE, FILTER_ACCEL); // optional
     
     Serial.println("Started");
     last_ms = millis();
@@ -27,6 +27,7 @@ void loop()
     if (wiimote.available() > 0) 
     {
         ButtonState  button  = wiimote.getButtonState();
+        AccelState   accel   = wiimote.getAccelState();
         NunchukState nunchuk = wiimote.getNunchukState();
 
         num_updates++;
@@ -60,6 +61,7 @@ void loop()
             Serial.print(cright);
             Serial.print(cup);
             Serial.print(cdown);
+            Serial.printf(", wiimote.axis: %3d/%3d/%3d", accel.xAxis, accel.yAxis, accel.zAxis);
             Serial.printf(", nunchuck.stick: %3d/%3d", nunchuk.xStick, nunchuk.yStick);
             Serial.printf(", nunchuck.axis: %3d/%3d/%3d\n", nunchuk.xAxis, nunchuk.yAxis, nunchuk.zAxis);
         }
