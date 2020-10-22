@@ -62,8 +62,8 @@ void loop()
             Serial.print(cup);
             Serial.print(cdown);
             Serial.printf(", wiimote.axis: %3d/%3d/%3d", accel.xAxis, accel.yAxis, accel.zAxis);
-            Serial.printf(", nunchuck.stick: %3d/%3d", nunchuk.xStick, nunchuk.yStick);
-            Serial.printf(", nunchuck.axis: %3d/%3d/%3d\n", nunchuk.xAxis, nunchuk.yAxis, nunchuk.zAxis);
+            Serial.printf(", nunchuk.axis: %3d/%3d/%3d", nunchuk.xAxis, nunchuk.yAxis, nunchuk.zAxis);
+            Serial.printf(", nunchuk.stick: %3d/%3d\n", nunchuk.xStick, nunchuk.yStick);
         }
     }
 
