@@ -20,6 +20,9 @@
         },
         {
             "path": "Wiimote"
+        },
+        {
+            "path": "BTSerial"
         }
     ],
     "settings": {}
