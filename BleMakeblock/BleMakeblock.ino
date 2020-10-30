@@ -1,25 +1,32 @@
+// ESP32 BLE Server
+
 #include <BLEDevice.h>
-#include <BLEUtils.h>
 #include <BLEServer.h>
+#include <BLEUtils.h>
+#include <BLE2902.h>
 #include <Arduino.h>
 
 // See the following for generating UUIDs:
 // https://www.uuidgenerator.net/
 
-#define SERVICE_UUID        "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
-#define CHARACTERISTIC_UUID "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define SERVICE_UUID "4fafc201-1fb5-459e-8fcc-c5c9c331914b"
+#define HELLO_UUID   "beb5483e-36e1-4688-b7f5-ea07361b26a8"
+#define COUNT_UUID   "6f736fe9-ce83-4150-88d1-45881fb243cb"
 
-BLEServer *pServer = NULL;
-BLEService *pService = NULL;
-BLECharacteristic *pCharacteristic = NULL;
-BLEAdvertising *pAdvertising = NULL;
+static BLEServer *pServer = NULL;
+static BLEService *pService = NULL;
+static BLECharacteristic *pHelloCharacteristic = NULL;
+static BLECharacteristic *pCountCharacteristic = NULL;
+static BLEAdvertising *pAdvertising = NULL;
 
-bool deviceConnected = false;
+static bool deviceConnected = false;
+static uint32_t count = 0;
 
 class MyServerCallbacks: public BLEServerCallbacks 
 {
     void onConnect(BLEServer* pServer) 
     {
+      count = 0;
       deviceConnected = true;
       Serial.println("connected");
     };
@@ -31,11 +38,11 @@ class MyServerCallbacks: public BLEServerCallbacks
     }
 };
 
-class MyCallbacks: public BLECharacteristicCallbacks 
+class HelloCallbacks: public BLECharacteristicCallbacks 
 {
 	void onRead(BLECharacteristic* pCharacteristic)
     {
-        Serial.println("read");
+        Serial.println("hello read");
     }
 
     void onWrite(BLECharacteristic *pCharacteristic) 
@@ -43,7 +50,7 @@ class MyCallbacks: public BLECharacteristicCallbacks
       std::string value = pCharacteristic->getValue();
       if (!value.empty()) 
       {
-        Serial.print("written: ");
+        Serial.print("hello written: ");
         Serial.println(value.c_str());
       }
     }
@@ -62,16 +69,24 @@ void setup()
   pServer->setCallbacks(new MyServerCallbacks());
 
   // create BLE service
-  BLEService *pService = pServer->createService(SERVICE_UUID);
+  pService = pServer->createService(SERVICE_UUID);
 
   // create BLE characteristic
-  pCharacteristic = pService->createCharacteristic(
-                        CHARACTERISTIC_UUID,
-                        BLECharacteristic::PROPERTY_READ |
-                        BLECharacteristic::PROPERTY_WRITE
-                    );
-  pCharacteristic->setValue("Hello World!");
-  pCharacteristic->setCallbacks(new MyCallbacks());
+  pHelloCharacteristic = pService->createCharacteristic(
+      HELLO_UUID,
+      BLECharacteristic::PROPERTY_READ |
+      BLECharacteristic::PROPERTY_WRITE
+    );
+  pHelloCharacteristic->setValue("Hello World!");
+  pHelloCharacteristic->setCallbacks(new HelloCallbacks());
+
+  // create another BLE characteristic
+  pCountCharacteristic = pService->createCharacteristic(
+      COUNT_UUID,
+      BLECharacteristic::PROPERTY_NOTIFY
+    );
+  pCountCharacteristic->setValue(count);
+  pCountCharacteristic->addDescriptor(new BLE2902()); // CCCD
 
   // start BLE service
   pService->start();
@@ -89,5 +104,13 @@ void setup()
 
 void loop() 
 {
+  count++;
+
+  if (deviceConnected)
+  {
+    pCountCharacteristic->setValue(count);
+    pCountCharacteristic->notify();
+  }
+
   delay(10);
 }
