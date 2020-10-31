@@ -8,14 +8,14 @@ Some highlights:
 
 -  [AtomMatrixVernie](AtomMatrixVernie) : controlling a Lego Boost robot (e.g. Vernie) wireless with the AtomMatrix and its accelerometer
 
--  [Wiimote](Wiimote) : using Nintendo Wii Remote/Nunchuk as wireless input device for ESP32 (e.g. to control a robot)
+-  [Wiimote](Wiimote) : using a Nintendo Wii Remote/Nunchuk as wireless input device for ESP32 (e.g. to control a robot)
 
 Some examples use forked libraries with modifications/enhancements, that you can find in my other repositories.
 
 
 ## PlatformIO
 
-I use [PlatformIO](https://platformio.org/platformio-ide) and VS code with the Arduino framework under Windows 10. 
+I use [PlatformIO](https://platformio.org/platformio-ide) and [VS code](https://code.visualstudio.com/) with the Arduino framework under Windows 10. 
 All examples are part of a single PlatformIO workspace. 
 It should also be possible to open the individual examples/folders directly in the Arduino IDE.
 
