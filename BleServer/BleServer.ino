@@ -1,9 +1,22 @@
 // ESP32 BLE Server
 
+#define USE_NIMBLE 1
+
+#if USE_NIMBLE
+#include <NimBLEDevice.h>
+#define PROP_READ   NIMBLE_PROPERTY::READ
+#define PROP_WRITE  NIMBLE_PROPERTY::WRITE
+#define PROP_NOTIFY NIMBLE_PROPERTY::NOTIFY
+#else
 #include <BLEDevice.h>
 #include <BLEServer.h>
 #include <BLEUtils.h>
 #include <BLE2902.h>
+#define PROP_READ   BLECharacteristic::PROPERTY_READ
+#define PROP_WRITE  BLECharacteristic::PROPERTY_WRITE
+#define PROP_NOTIFY BLECharacteristic::PROPERTY_NOTIFY
+#endif
+
 #include <Arduino.h>
 
 // See the following for generating UUIDs:
@@ -73,20 +86,19 @@ void setup()
 
   // create BLE characteristic
   pHelloCharacteristic = pService->createCharacteristic(
-      HELLO_UUID,
-      BLECharacteristic::PROPERTY_READ |
-      BLECharacteristic::PROPERTY_WRITE
-    );
+    HELLO_UUID, PROP_READ | PROP_WRITE);
   pHelloCharacteristic->setValue("Hello World!");
   pHelloCharacteristic->setCallbacks(new HelloCallbacks());
 
   // create another BLE characteristic
   pCountCharacteristic = pService->createCharacteristic(
-      COUNT_UUID,
-      BLECharacteristic::PROPERTY_NOTIFY
-    );
+    COUNT_UUID, PROP_NOTIFY);
   pCountCharacteristic->setValue(count);
+#if USE_NIMBLE
+  // automatic
+#else
   pCountCharacteristic->addDescriptor(new BLE2902()); // CCCD
+#endif
 
   // start BLE service
   pService->start();
@@ -94,9 +106,13 @@ void setup()
   // start BLE advertising
   pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
-  pAdvertising->setScanResponse(true);
+  pAdvertising->setScanResponse(false);
+#if USE_NIMBLE
+  // not required
+#else
   pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
   pAdvertising->setMinPreferred(0x12);
+#endif
 
   BLEDevice::startAdvertising();
   Serial.println("Waiting for client");
