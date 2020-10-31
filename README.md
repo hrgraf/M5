@@ -1,4 +1,12 @@
 # M5
-M5Stack examples as Plattform IO workspace.
+This my collection of experiments using ESP32 devices from M5Stack, e.g. the [AtomMatrix](https://docs.m5stack.com/#/en/core/atom_matrix).
 
-AtomMatrixVernie uses an AtomMatrix ESP32 device (https://docs.m5stack.com/#/en/core/atom_matrix) as a remote control for the Lego Boost Robot Vernie (https://www.lego.com/en-ch/product/boost-creative-toolbox-17101) using legoino (https://github.com/corneliusmunz/legoino).
+I use PlatformIO with the Arduino framework. All examples are part of a single PlatformIO workspace. 
+It should be possible to open the individual examples directly in the Arduino IDE.
+
+Notable examples include:
+
+  [AtomMatrixVernie](AtomMatrixVernie) : controlling the Lego Boost robot Vernie with the AtomMatrix accelerometer
+
+  [Wiimote](Wiimote) : using Nintendo Wii Remote/Nunchuk as input device for ESP32
+
