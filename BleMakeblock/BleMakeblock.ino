@@ -1,9 +1,6 @@
 // ESP32 BLE Server
 
-#include <BLEDevice.h>
-#include <BLEServer.h>
-#include <BLEUtils.h>
-#include <BLE2902.h>
+#include <NimBLEDevice.h>
 #include <Arduino.h>
 
 // See the following for generating UUIDs:
@@ -73,20 +70,14 @@ void setup()
 
   // create BLE characteristic
   pHelloCharacteristic = pService->createCharacteristic(
-      HELLO_UUID,
-      BLECharacteristic::PROPERTY_READ |
-      BLECharacteristic::PROPERTY_WRITE
-    );
+    HELLO_UUID, READ | WRITE);
   pHelloCharacteristic->setValue("Hello World!");
   pHelloCharacteristic->setCallbacks(new HelloCallbacks());
 
   // create another BLE characteristic
   pCountCharacteristic = pService->createCharacteristic(
-      COUNT_UUID,
-      BLECharacteristic::PROPERTY_NOTIFY
-    );
+    COUNT_UUID, NOTIFY); // automatic CCCD
   pCountCharacteristic->setValue(count);
-  pCountCharacteristic->addDescriptor(new BLE2902()); // CCCD
 
   // start BLE service
   pService->start();
@@ -94,10 +85,7 @@ void setup()
   // start BLE advertising
   pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
-  pAdvertising->setScanResponse(true);
-  pAdvertising->setMinPreferred(0x06);  // functions that help with iPhone connections issue
-  pAdvertising->setMinPreferred(0x12);
-
+  pAdvertising->setScanResponse(false);
   BLEDevice::startAdvertising();
   Serial.println("Waiting for client");
 }
