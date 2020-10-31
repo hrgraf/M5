@@ -45,7 +45,7 @@ Additionally, I use some environment variables for global folders, instead of de
 | PLATFORMIO_BUILD_DIR | e.g. c:\temp\pio_build |
 | PLATFORMIO_LIBDEPS_DIR | e.g. c:\temp\pio_libs|
 
-Alternatively, I could set those directories directly in the platformio.ini file:
+Alternatively, one could set those directories directly in the platformio.ini file:
 ```
 lib_extra_dirs = c:\pio\extra_libs
 build_dir      = c:\temp\pio_build
