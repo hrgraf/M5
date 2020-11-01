@@ -1,19 +1,42 @@
 /**
- * BoostHub example to connect to Lego Vernie robot from M5Atom Matrix.
+ * This example uses an ESP32 AtomMatrix (https://docs.m5stack.com/#/en/core/atom_matrix) as a remote control 
+ * for the Lego Boost Robot Vernie using the legoino (https://github.com/corneliusmunz/legoino) library.
+ *
+ * It allows to drive the Lego Boost robot by tilting the AtomMatrix device using its built-in accelerometer.
+ * A visualization on the matrix shows how the tilting angles would drive the 2 motors/tracks.
+ * Pushing the AtomMatrix button toggles between active motor drive and idel (default).
  * 
+ * Additionally, the distance sensor is used to control the LED on the BoostHub, while the detected color
+ * is shown on the AtomMatrix.
+ * 
+ * (c) Copyright 2020 - Hans-Rudolf Graf
+ *
+ * Released under MIT License
+ *
  */
 
 #include "M5Atom.h"
-#include "BoostHub.h"
+#include "Boost.h"
 
-static bool active = false;
-
-#define LIMIT 50
+#define LIMIT 50 // motor speed limit
 inline double max(double a, double b) { return ((a >= b) ? a : b); }
 inline double min(double a, double b) { return ((a >= b) ? b : a); }
 
-// create a hub instance
-static BoostHub hub;
+// Boost hub instance
+static Boost hub;
+static const byte portA    = (byte)MoveHubPort::A;
+static const byte portB    = (byte)MoveHubPort::B;
+static const byte portC    = (byte)MoveHubPort::C;
+static const byte portD    = (byte)MoveHubPort::D;
+static const byte portTilt = (byte)MoveHubPort::TILT;
+
+// variables that get updated in the callbacks
+static int rssi = 0; // in dB
+static uint8_t batteryLevel = 0; // in percent
+static int tiltX = 0, tiltY = 0; // in degrees
+static int rotation = 0; // in degrees
+static double distance = 0; // in cm (??)
+static int color = 0; // index
 
 // lego colors
 static CRGB lego_rgb[NUM_COLOR] =
@@ -31,6 +54,144 @@ static CRGB lego_rgb[NUM_COLOR] =
   CRGB::White
 };
 
+static bool active = false; // press AtomMatrix button to toggle
+static long last_ms = 0;
+static int num_run = 0, num_updates = 0;
+
+// callback function  to handle updates of the hub properties
+void hubPropertyChangeCallback(void *hub, HubPropertyReference hubProperty, uint8_t *pData)
+{
+  Lpf2Hub *myHub = (Lpf2Hub *)hub;
+  Version version;
+  ButtonState button;
+
+  num_updates++;
+
+  switch (hubProperty)
+  {
+  case HubPropertyReference::RSSI:
+    rssi = myHub->parseRssi(pData);
+    //Serial.print("RSSI: ");
+    //Serial.println(rssi);
+    break;
+
+  case HubPropertyReference::BATTERY_VOLTAGE:
+    batteryLevel = myHub->parseBatteryLevel(pData);
+    //Serial.print("BatteryLevel: ");
+    //Serial.println(batteryLevel);
+    break;
+
+  case HubPropertyReference::BUTTON:
+    button = myHub->parseHubButton(pData);
+    //Serial.print("Button: ");
+    //Serial.println((int)button);
+    if (button == ButtonState::PRESSED)
+    {
+        Serial.println("Button pressed: shut down HUB");
+        myHub->shutDownHub();
+    }
+    break;
+
+  case HubPropertyReference::ADVERTISING_NAME:
+    Serial.print("Advertising Name: ");
+    Serial.println(myHub->parseHubAdvertisingName(pData).c_str());
+    break;
+
+  case HubPropertyReference::FW_VERSION:
+    version = myHub->parseVersion(pData);
+    Serial.print("FWVersion: ");
+    Serial.print(version.Major);
+    Serial.print("-");
+    Serial.print(version.Minor);
+    Serial.print("-");
+    Serial.print(version.Bugfix);
+    Serial.print(" Build: ");
+    Serial.println(version.Build);
+    break;
+
+  case HubPropertyReference::HW_VERSION:
+    version = myHub->parseVersion(pData);
+    Serial.print("HWVersion: ");
+    Serial.print(version.Major);
+    Serial.print("-");
+    Serial.print(version.Minor);
+    Serial.print("-");
+    Serial.print(version.Bugfix);
+    Serial.print(" Build: ");
+    Serial.println(version.Build);
+    break;
+
+  default:
+    Serial.print("Unhandled HubProperty: ");
+    Serial.println((byte)hubProperty);
+  }
+}
+
+// callback function to handle updates of sensor values
+void portValueChangeCallback(void *hub, byte portNumber, DeviceType deviceType, uint8_t *pData)
+{
+  Lpf2Hub *myHub = (Lpf2Hub *)hub;
+  CRGB col_center;
+
+  num_updates++;
+
+  switch (deviceType)
+  {
+  case DeviceType::MOVE_HUB_TILT_SENSOR:
+    tiltX = myHub->parseBoostTiltSensorX(pData);
+    tiltY = myHub->parseBoostTiltSensorY(pData);
+    //Serial.print("Tilt X: ");
+    //Serial.print(tiltX);
+    //Serial.print(", Y: ");
+    //Serial.println(tiltY);
+    break;
+
+  case DeviceType::COLOR_DISTANCE_SENSOR:
+    color = myHub->parseColor(pData);
+    distance = myHub->parseDistance(pData);
+    //Serial.print("Port: ");
+    //Serial.print(portNumber);
+    //Serial.print(", Color: ");
+    //if ((color >= 0) && (color < NUM_COLOR))
+    //    Serial.print(COLOR_STRING[color]);
+    //else
+    //    Serial.print("unknown");
+    //Serial.print(", Distance: ");
+    //Serial.println(distance);
+
+    // set hub LED color dependent of the distance sensor
+    // red    -- short distance
+    // orange -- medium distance
+    // green  -- large distance
+    if (distance < 50.0)
+        myHub->setLedColor(RED);
+    else if (distance < 100.0)
+        myHub->setLedColor(ORANGE);
+    else
+        myHub->setLedColor(GREEN);
+
+    // show color on Atom Matrix center pixel
+    col_center = CRGB::Black;
+    if ((color >= 0) && (color < NUM_COLOR))
+        col_center = lego_rgb[color];
+    M5.dis.drawpix(2, 2, col_center);
+    break;
+
+  case DeviceType::MEDIUM_LINEAR_MOTOR:
+    rotation = myHub->parseTachoMotor(pData);
+    Serial.print("Port: ");
+    Serial.print(portNumber);
+    Serial.print(", Rotation: ");
+    Serial.println(rotation);
+    break;
+
+  default:
+    Serial.print("Unhandled DeviceType: ");
+    Serial.println((byte)deviceType);
+  }
+}
+
+// initialization
 void setup()
 {
     M5.begin(true, true, true);
@@ -38,15 +199,17 @@ void setup()
     M5.dis.fillpix(CRGB::Blue);
 
     Serial.println("Connect to BoostHub...");
-    hub.init(); // scan for 10s
+    hub.init(1); // scan for 1s
     
     delay(50);
+    last_ms = millis();
 }
 
 // main loop
 void loop()
 {
     M5.update();
+    num_run++;
 
     double pitch, roll;
     M5.IMU.getAttitude(&roll, &pitch);
@@ -86,34 +249,28 @@ void loop()
         hub.connectHub();
         if (hub.isConnected())
         {
-            Serial.print("Firmware Version: ");
-            Serial.print(hub.getFirmwareVersionMajor(), DEC);
-            Serial.print("-");
-            Serial.print(hub.getFirmwareVersionMinor(), DEC);
-            Serial.print("-");
-            Serial.print(hub.getFirmwareVersionBugfix(), DEC);
-            Serial.print("-");
-            Serial.println(hub.getFirmwareVersionBuild(), DEC);
-        
-            Serial.print("Hardware Version: ");
-            Serial.print(hub.getHardwareVersionMajor(), DEC);
-            Serial.print("-");
-            Serial.print(hub.getHardwareVersionMinor(), DEC);
-            Serial.print("-");
-            Serial.print(hub.getHardwareVersionBugfix(), DEC);
-            Serial.print("-");
-            Serial.println(hub.getHardwareVersionBuild(), DEC);
-
-            // activate built-in tilt sensor
-            hub.activatePortDevice(BoostHub::Port::TILT, MOVE_HUB_TILT_SENSOR);
-
-            // connect color/distance sensor to port c, activate sensor for updates
-            hub.activatePortDevice(BoostHub::Port::C, COLOR_DISTANCE_SENSOR);
-
-            // connect boost tacho motor to port d, activate sensor for updates
-            hub.activatePortDevice(BoostHub::Port::D, MEDIUM_LINEAR_MOTOR);
-
+            Serial.println("Connected to HUB");
             M5.dis.fillpix(CRGB::Black);
+
+            delay(300); //needed because otherwise the message is to fast after the connection procedure and the message will get lost
+            hub.activateHubPropertyUpdate(HubPropertyReference::HW_VERSION, hubPropertyChangeCallback);
+            delay(100);
+            hub.activateHubPropertyUpdate(HubPropertyReference::FW_VERSION, hubPropertyChangeCallback);
+            delay(100);
+            hub.activateHubPropertyUpdate(HubPropertyReference::ADVERTISING_NAME, hubPropertyChangeCallback);
+            delay(100);
+
+            hub.activateHubPropertyUpdate(HubPropertyReference::RSSI, hubPropertyChangeCallback);
+            hub.activateHubPropertyUpdate(HubPropertyReference::BATTERY_VOLTAGE, hubPropertyChangeCallback);
+            hub.activateHubPropertyUpdate(HubPropertyReference::BUTTON, hubPropertyChangeCallback);
+
+            hub.activatePortDevice(portTilt, portValueChangeCallback);
+
+            hub.activatePortDevice(portC, (byte)DeviceType::COLOR_DISTANCE_SENSOR, portValueChangeCallback);
+            hub.activatePortDevice(portD, (byte)DeviceType::MEDIUM_LINEAR_MOTOR, portValueChangeCallback);
+
+            if (!active)
+                M5.dis.fillpix(CRGB::Red); // inactive
         }
         else
         {
@@ -121,60 +278,21 @@ void loop()
         }
     }
 
-    // if connected, get distance
     if (hub.isConnected())
     {
-        // read distance value of color/distance sensor
-        double distance = hub.getDistance();
-
-        // read color value of sensor
-        int color = hub.getColor();
-
-        // set hub LED color dependent on the distance of the sensor to an object
-        // red -- short distance
-        // orange -- medium distance
-        // green -- large distance
-        if (distance < 50.0)
-            hub.setLedColor(RED);
-        else if (distance < 100.0)
-            hub.setLedColor(ORANGE);
-        else
-            hub.setLedColor(GREEN);
-
-//      Serial.print("Rssi: ");
-//      Serial.print(hub.getRssi(), DEC);
-//      Serial.print(", BatteryLevel [%]: ");
-//      Serial.print(hub.getBatteryLevel(), DEC);
-//      Serial.print(", Tilt [x/y]: ");
-//      Serial.print(hub.getTiltX(), DEC);
-//      Serial.print("/");
-//      Serial.print(hub.getTiltY(), DEC);
-//      Serial.print(", Distance: ");
-//      Serial.print(distance);
-//      Serial.print(", Color: ");
-//      if (color < NUM_COLOR)
-//          Serial.println(COLOR_STRING[color]);
-//      else
-//          Serial.println("unknown");
-
-        CRGB col_center = CRGB::Black;
-        if (color < NUM_COLOR)
-            col_center = lego_rgb[color];
-        M5.dis.drawpix(2, 2,col_center);
-
         if (radius > 10) // minimal threshold to move
         {
-            hub.setMotorSpeed(BoostHub::Port::A, left);
-            hub.setMotorSpeed(BoostHub::Port::B, right);
+            hub.setBasicMotorSpeed(portA, left);
+            hub.setBasicMotorSpeed(portB, right);
         }
         else
         {
-            hub.stopMotor(BoostHub::Port::A);
-            hub.stopMotor(BoostHub::Port::B);
+            hub.stopBasicMotor(portA);
+            hub.stopBasicMotor(portB);
         }
     }
 
-    // visualize track movements on matrix
+    // visualize track movements on matrix 
     CRGB col_left  = (left  > 0) ? CRGB::Green : CRGB::Red;
     CRGB col_right = (right > 0) ? CRGB::Green : CRGB::Red;
     int amp_left   = abs(left ) / 5;
@@ -185,5 +303,27 @@ void loop()
         M5.dis.drawpix(4, 4-i, (amp_right > i) ? col_right : CRGB::Black);
     }
 
-    delay(20);
-} // End of loop
+    long ms = millis();
+    if (ms - last_ms >= 1000)
+    {
+        Serial.printf("Run %d times per second with %d updates\n", num_run, num_updates);
+        num_run = num_updates = 0;
+        last_ms += 1000;
+
+        if (hub.isConnected())
+        {
+            Serial.print("RSSI: ");
+            Serial.print(rssi);
+            Serial.print(", BatteryLevel: ");
+            Serial.print(batteryLevel);
+            Serial.print(", Tilt X: ");
+            Serial.print(tiltX);
+            Serial.print(" Y: ");
+            Serial.print(tiltY);
+            Serial.print(", Distance: ");
+            Serial.println(distance);
+        }
+    }
+
+    delay(10);
+}
