@@ -131,7 +131,7 @@ void hubPropertyChangeCallback(void *hub, HubPropertyReference hubProperty, uint
 void portValueChangeCallback(void *hub, byte portNumber, DeviceType deviceType, uint8_t *pData)
 {
   Lpf2Hub *myHub = (Lpf2Hub *)hub;
-  CRGB col_center;
+  CRGB crgb = CRGB::Black;
 
   num_updates++;
 
@@ -171,10 +171,9 @@ void portValueChangeCallback(void *hub, byte portNumber, DeviceType deviceType, 
         myHub->setLedColor(GREEN);
 
     // show color on Atom Matrix center pixel
-    col_center = CRGB::Black;
     if ((color >= 0) && (color < NUM_COLOR))
-        col_center = lego_rgb[color];
-    M5.dis.drawpix(2, 2, col_center);
+        crgb = lego_rgb[color];
+    M5.dis.drawpix(2, 2, crgb);
     break;
 
   case DeviceType::MEDIUM_LINEAR_MOTOR:
@@ -252,12 +251,13 @@ void loop()
             Serial.println("Connected to HUB");
             M5.dis.fillpix(CRGB::Black);
 
-            delay(300); //needed because otherwise the message is to fast after the connection procedure and the message will get lost
+            delay(200); //needed because otherwise the message is to fast after the connection procedure and the message will get lost
             hub.activateHubPropertyUpdate(HubPropertyReference::HW_VERSION, hubPropertyChangeCallback);
-            delay(100);
             hub.activateHubPropertyUpdate(HubPropertyReference::FW_VERSION, hubPropertyChangeCallback);
-            delay(100);
             hub.activateHubPropertyUpdate(HubPropertyReference::ADVERTISING_NAME, hubPropertyChangeCallback);
+            delay(100);
+            hub.requestHubPropertyUpdate(HubPropertyReference::HW_VERSION, hubPropertyChangeCallback);
+            hub.requestHubPropertyUpdate(HubPropertyReference::FW_VERSION, hubPropertyChangeCallback);
             delay(100);
 
             hub.activateHubPropertyUpdate(HubPropertyReference::RSSI, hubPropertyChangeCallback);
@@ -293,14 +293,14 @@ void loop()
     }
 
     // visualize track movements on matrix 
-    CRGB col_left  = (left  > 0) ? CRGB::Green : CRGB::Red;
-    CRGB col_right = (right > 0) ? CRGB::Green : CRGB::Red;
+    CRGB crgb_left  = (left  > 0) ? CRGB::Green : CRGB::Red;
+    CRGB crgb_right = (right > 0) ? CRGB::Green : CRGB::Red;
     int amp_left   = abs(left ) / 5;
     int amp_right  = abs(right) / 5;
     for (int i=0; i<5; i++)
     {
-        M5.dis.drawpix(0, 4-i, (amp_left  > i) ? col_left  : CRGB::Black);
-        M5.dis.drawpix(4, 4-i, (amp_right > i) ? col_right : CRGB::Black);
+        M5.dis.drawpix(0, 4-i, (amp_left  > i) ? crgb_left  : CRGB::Black);
+        M5.dis.drawpix(4, 4-i, (amp_right > i) ? crgb_right : CRGB::Black);
     }
 
     long ms = millis();
