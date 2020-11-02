@@ -1,4 +1,4 @@
-This example for the the legoino (https://github.com/corneliusmunz/legoino) library uses 
+This Arduino example for the the legoino (https://github.com/corneliusmunz/legoino) library uses 
 an [Atom Matrix](https://docs.m5stack.com/#/en/core/atom_matrix) ESP32 device to emulate 
 a [Lego Boost](https://www.lego.com/en-ch/product/boost-creative-toolbox-17101)  Move Hub.
 
