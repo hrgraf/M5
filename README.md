@@ -2,11 +2,13 @@
 
 ## Introduction
 
-This is my collection of experiments using ESP32 devices from M5Stack, e.g. the [AtomMatrix](https://docs.m5stack.com/#/en/core/atom_matrix).
+This is my collection of experiments using ESP32 devices from M5Stack, e.g. the [Atom Matrix](https://docs.m5stack.com/#/en/core/atom_matrix).
 
 Some highlights:
 
--  [AtomMatrixVernie](AtomMatrixVernie) : controlling a Lego Boost robot (e.g. Vernie) wireless with the AtomMatrix and its accelerometer
+-  [AtomMatrixVernie](AtomMatrixVernie) : controlling a Lego Boost robot (e.g. Vernie) wireless with an ESP32 Atom Matrix and its accelerometer
+
+-  [HubEmulation](HubEmulation) : ESP32 Atom Matrix behave as a Lego Boost Move Hub, controllable e.g. with the Lego Powered Up app on mobile phone
 
 -  [Wiimote](Wiimote) : using a Nintendo Wii Remote/Nunchuk as wireless input device for ESP32 (e.g. to control a robot)
 
