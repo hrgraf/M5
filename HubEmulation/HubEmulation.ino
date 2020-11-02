@@ -15,9 +15,11 @@
 Lpf2HubEmulation hub("ESP32 Move Hub", HubType::POWERED_UP_HUB); // BOOST_MOVE_HUB);
 static const byte portA    = (byte)MoveHubPort::A;
 static const byte portB    = (byte)MoveHubPort::B;
+static const byte portAB   = (byte)MoveHubPort::AB;
 static const byte portC    = (byte)MoveHubPort::C;
 static const byte portD    = (byte)MoveHubPort::D;
-static const byte portTilt = (byte)MoveHubPort::TILT;
+static const byte portLED  = (byte)MoveHubPort::LED;
+static const byte portTILT = (byte)MoveHubPort::TILT;
 
 // lego colors
 static CRGB lego_rgb[NUM_COLOR] =
@@ -35,39 +37,44 @@ static CRGB lego_rgb[NUM_COLOR] =
   CRGB::White
 };
 
+static long last_ms = 0;
+static int num_run = 0, num_updates = 0;
+
 void writeValueCallback(byte port, byte value)
 {
     int svalue = ((int8_t)value);
     CRGB crgb = CRGB::Black;
     
-    switch ((MoveHubPort)port)
+    num_updates++;
+
+    switch (port)
     {
-    case MoveHubPort::A:
+    case portA:
         Serial.print("Drive cmd for Port A: ");
         Serial.println(svalue);
         break;
 
-    case MoveHubPort::B:
+    case portB:
         Serial.print("Drive cmd for Port B: ");
         Serial.println(svalue);
         break;
 
-    case MoveHubPort::AB:
+    case portAB:
         Serial.print("Drive cmd for Port AB: ");
         Serial.println(svalue);
         break;
 
-    case MoveHubPort::C:
+    case portC:
         Serial.print("Drive cmd for Port C: ");
         Serial.println(svalue);
         break;
 
-    case MoveHubPort::D:
+    case portD:
         Serial.print("Drive cmd for Port D: ");
         Serial.println(svalue);
         break;
 
-    case MoveHubPort::LED:
+    case portLED:
         Serial.print("LED cmd for color: ");
         if (value < NUM_COLOR)
         {
@@ -90,43 +97,77 @@ void writeValueCallback(byte port, byte value)
 // initialization
 void setup()
 {
-  M5.begin(true, true, true);
-  M5.IMU.Init();
-  M5.dis.fillpix(CRGB::Blue);
+    M5.begin(true, true, true);
+    M5.IMU.Init();
+    M5.dis.fillpix(CRGB::Blue);
+    
+    // define the callback function if a write message event on the characteristic occurs
+    hub.setWritePortCallback(&writeValueCallback); 
+    hub.start();
+    Serial.println("Started ESP32 Move Hub...");
 
-  // define the callback function if a write message event on the characteristic occurs
-  hub.setWritePortCallback(&writeValueCallback); 
-  hub.start();
-  Serial.println("Started ESP32 Move Hub...");
+    delay(50);
+    last_ms = millis();
 }
 
 // main loop
 void loop()
 {
-  // if an app is connected, attach some devices on the ports to signalize 
-  // the app that values could be received/written to that ports
-  if (hub.isConnected && !hub.isPortInitialized)
-  {
-    Serial.println("Connected");
-    M5.dis.fillpix(CRGB::Black);
+    M5.update();
+    num_run++;
 
-    delay(1000);
-    hub.isPortInitialized = true;
-    hub.attachDevice((byte)MoveHubPort::A, DeviceType::MOVE_HUB_MEDIUM_LINEAR_MOTOR);
-    delay(1000);
-    hub.attachDevice((byte)MoveHubPort::LED, DeviceType::HUB_LED);
-    delay(1000);
-    hub.attachDevice((byte)MoveHubPort::B, DeviceType::MOVE_HUB_MEDIUM_LINEAR_MOTOR);
-    delay(1000);
+    // if an app connects, attach some devices on the ports to signalize 
+    // the app that values could be received/written to those ports
+    if (hub.isConnected && !hub.isPortInitialized)
+    {
+        Serial.println("Connected");
+        M5.dis.fillpix(CRGB::Black);
+        
+        delay(1000);
+        hub.isPortInitialized = true;
+        hub.attachDevice(portA, DeviceType::MOVE_HUB_MEDIUM_LINEAR_MOTOR);
+        delay(1000);
+        hub.attachDevice(portB, DeviceType::MOVE_HUB_MEDIUM_LINEAR_MOTOR);
+        delay(1000);
+        hub.attachDevice(portC, DeviceType::COLOR_DISTANCE_SENSOR);
+        delay(1000);
+        hub.attachDevice(portD, DeviceType::MEDIUM_LINEAR_MOTOR);
+        delay(1000);
+        hub.attachDevice(portLED, DeviceType::HUB_LED);
+        delay(1000);
+        hub.attachDevice(portTILT, DeviceType::MOVE_HUB_TILT_SENSOR);
+        delay(1000);
+        
+        M5.dis.fillpix(CRGB::Green);
+        last_ms = millis();
+    }
 
-    M5.dis.fillpix(CRGB::Green);
-  }
+    // app disconnects
+    if (!hub.isConnected && hub.isPortInitialized)
+    {
+        Serial.println("Disconnected");
+        hub.isPortInitialized = false;
+        M5.dis.fillpix(CRGB::Red);
+    } 
 
-  if (!hub.isConnected && hub.isPortInitialized)
-  {
-    Serial.println("Disconnected");
-    hub.isPortInitialized = false;
-    M5.dis.fillpix(CRGB::Red);
-  }
+    // app connected
+    if (hub.isConnected && hub.isPortInitialized)
+    {
+        // report button press/release
+        if (M5.Btn.wasPressed())
+          hub.setHubButton(true);
+        if (M5.Btn.wasReleased())
+          hub.setHubButton(false);
 
-} // End of loop
+    }
+
+    long ms = millis();
+    if (ms - last_ms >= 1000)
+    {
+        //Serial.printf("Run %d times per second with %d updates\n", num_run, num_updates);
+        num_run = num_updates = 0;
+        last_ms += 1000;
+    }
+
+    delay(10);
+}
