@@ -39,7 +39,7 @@ static double distance = 0; // in cm (??)
 static int color = 0; // index
 
 // lego colors
-static CRGB lego_rgb[NUM_COLOR] =
+static CRGB lego_rgb[NUM_COLORS] =
 {
   CRGB::Black,
   CRGB::Pink,
@@ -152,7 +152,7 @@ void portValueChangeCallback(void *hub, byte portNumber, DeviceType deviceType, 
     //Serial.print("Port: ");
     //Serial.print(portNumber);
     //Serial.print(", Color: ");
-    //if ((color >= 0) && (color < NUM_COLOR))
+    //if ((color >= 0) && (color < NUM_COLORS))
     //    Serial.print(COLOR_STRING[color]);
     //else
     //    Serial.print("unknown");
@@ -171,7 +171,7 @@ void portValueChangeCallback(void *hub, byte portNumber, DeviceType deviceType, 
         myHub->setLedColor(GREEN);
 
     // show color on Atom Matrix center pixel
-    if ((color >= 0) && (color < NUM_COLOR))
+    if ((color >= 0) && (color < NUM_COLORS))
         crgb = lego_rgb[color];
     M5.dis.drawpix(2, 2, crgb);
     break;
@@ -263,11 +263,22 @@ void loop()
             hub.activateHubPropertyUpdate(HubPropertyReference::RSSI, hubPropertyChangeCallback);
             hub.activateHubPropertyUpdate(HubPropertyReference::BATTERY_VOLTAGE, hubPropertyChangeCallback);
             hub.activateHubPropertyUpdate(HubPropertyReference::BUTTON, hubPropertyChangeCallback);
+            delay(100);
 
             hub.activatePortDevice(portTilt, portValueChangeCallback);
+            delay(100);
+
+            byte portInfoReq[3] = {(byte)MessageType::PORT_INFORMATION_REQUEST, portTilt, 1};
+            hub.WriteValue(portInfoReq, 3);
+            delay(100);
+
+            byte portModeInfoReq[4] = {(byte)MessageType::PORT_MODE_INFORMATION_REQUEST, portTilt, 1};
+            hub.WriteValue(portModeInfoReq, 4);
+            delay(100);
 
             hub.activatePortDevice(portC, (byte)DeviceType::COLOR_DISTANCE_SENSOR, portValueChangeCallback);
             hub.activatePortDevice(portD, (byte)DeviceType::MEDIUM_LINEAR_MOTOR, portValueChangeCallback);
+            delay(100);
 
             if (!active)
                 M5.dis.fillpix(CRGB::Red); // inactive

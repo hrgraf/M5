@@ -12,7 +12,7 @@
 #include "LegoinoCommon.h"
 
 // Emulated hub instance
-Lpf2HubEmulation hub("ESP32 Move Hub", HubType::POWERED_UP_HUB); // BOOST_MOVE_HUB);
+Lpf2HubEmulation hub("ESP32 Move Hub", HubType::BOOST_MOVE_HUB);
 static const byte portA    = (byte)MoveHubPort::A;
 static const byte portB    = (byte)MoveHubPort::B;
 static const byte portAB   = (byte)MoveHubPort::AB;
@@ -22,7 +22,7 @@ static const byte portLED  = (byte)MoveHubPort::LED;
 static const byte portTILT = (byte)MoveHubPort::TILT;
 
 // lego colors
-static CRGB lego_rgb[NUM_COLOR] =
+static CRGB lego_rgb[NUM_COLORS] =
 {
   CRGB::Black,
   CRGB::Pink,
@@ -76,7 +76,7 @@ void writeValueCallback(byte port, byte value)
 
     case portLED:
         Serial.print("LED cmd for color: ");
-        if (value < NUM_COLOR)
+        if (value < NUM_COLORS)
         {
             Serial.println(COLOR_STRING[value]);
             crgb = lego_rgb[value];
@@ -129,10 +129,10 @@ void loop()
         delay(1000);
         hub.attachDevice(portB, DeviceType::MOVE_HUB_MEDIUM_LINEAR_MOTOR);
         delay(1000);
-        hub.attachDevice(portC, DeviceType::COLOR_DISTANCE_SENSOR);
-        delay(1000);
-        hub.attachDevice(portD, DeviceType::MEDIUM_LINEAR_MOTOR);
-        delay(1000);
+//      hub.attachDevice(portC, DeviceType::COLOR_DISTANCE_SENSOR);
+//      delay(1000);
+//      hub.attachDevice(portD, DeviceType::MEDIUM_LINEAR_MOTOR);
+//      delay(1000);
         hub.attachDevice(portLED, DeviceType::HUB_LED);
         delay(1000);
         hub.attachDevice(portTILT, DeviceType::MOVE_HUB_TILT_SENSOR);
