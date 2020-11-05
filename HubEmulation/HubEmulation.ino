@@ -129,8 +129,18 @@ void setup()
 // main loop
 void loop()
 {
+    int x=20, y=30; // default tilt
+
 #if USE_M5_ATOM
     M5.update();
+
+    double pitch, roll;
+    M5.IMU.getAttitude(&roll, &pitch);
+    //Serial.printf("IMU pitch: %.2f, roll: %.2f\n", pitch, roll);
+
+    // update tilt
+    x = -roll;
+    y = pitch;
 #endif
     num_run++;
 
@@ -184,6 +194,7 @@ void loop()
         if (M5.Btn.wasReleased())
           hub.setHubButton(false);
 #endif
+        hub.setHubTilt(portTILT, x, y);
     }
 
     long ms = millis();
@@ -194,5 +205,5 @@ void loop()
         last_ms += 1000;
     }
 
-    delay(10);
+    delay(20);
 }

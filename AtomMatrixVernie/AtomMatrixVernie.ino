@@ -28,7 +28,7 @@ static const byte portA    = (byte)MoveHubPort::A;
 static const byte portB    = (byte)MoveHubPort::B;
 static const byte portC    = (byte)MoveHubPort::C;
 static const byte portD    = (byte)MoveHubPort::D;
-static const byte portTilt = (byte)MoveHubPort::TILT;
+static const byte portTILT = (byte)MoveHubPort::TILT;
 
 // variables that get updated in the callbacks
 static int rssi = 0; // in dB
@@ -265,14 +265,14 @@ void loop()
             hub.activateHubPropertyUpdate(HubPropertyReference::BUTTON, hubPropertyChangeCallback);
             delay(100);
 
-            hub.activatePortDevice(portTilt, portValueChangeCallback);
+            hub.activatePortDevice(portTILT, portValueChangeCallback);
             delay(100);
 
-            byte portInfoReq[3] = {(byte)MessageType::PORT_INFORMATION_REQUEST, portTilt, 1};
+            byte portInfoReq[3] = {(byte)MessageType::PORT_INFORMATION_REQUEST, portTILT, 1};
             hub.WriteValue(portInfoReq, 3);
             delay(100);
 
-            byte portModeInfoReq[4] = {(byte)MessageType::PORT_MODE_INFORMATION_REQUEST, portTilt, 1};
+            byte portModeInfoReq[4] = {(byte)MessageType::PORT_MODE_INFORMATION_REQUEST, portTILT, 1};
             hub.WriteValue(portModeInfoReq, 4);
             delay(100);
 
