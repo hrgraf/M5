@@ -7,7 +7,12 @@
  * 
  */
 
+
+#define USE_M5_ATOM 1
+
+#if USE_M5_ATOM
 #include "M5Atom.h"
+#endif
 #include "Lpf2HubEmulation.h"
 #include "LegoinoCommon.h"
 
@@ -21,6 +26,7 @@ static const byte portD    = (byte)MoveHubPort::D;
 static const byte portLED  = (byte)MoveHubPort::LED;
 static const byte portTILT = (byte)MoveHubPort::TILT;
 
+#if USE_M5_ATOM
 // lego colors
 static CRGB lego_rgb[NUM_COLORS] =
 {
@@ -36,6 +42,7 @@ static CRGB lego_rgb[NUM_COLORS] =
   CRGB::Red,
   CRGB::White
 };
+#endif
 
 static long last_ms = 0;
 static int num_run = 0, num_updates = 0;
@@ -43,7 +50,9 @@ static int num_run = 0, num_updates = 0;
 void writeValueCallback(byte port, byte value)
 {
     int svalue = ((int8_t)value);
+#if USE_M5_ATOM
     CRGB crgb = CRGB::Black;
+#endif
     
     num_updates++;
 
@@ -79,11 +88,15 @@ void writeValueCallback(byte port, byte value)
         if (value < NUM_COLORS)
         {
             Serial.println(COLOR_STRING[value]);
+#if USE_M5_ATOM
             crgb = lego_rgb[value];
+#endif
         }
         else
             Serial.println(value);
+#if USE_M5_ATOM
         M5.dis.drawpix(2, 2, crgb);
+#endif
         break;
   
     default:
@@ -97,10 +110,13 @@ void writeValueCallback(byte port, byte value)
 // initialization
 void setup()
 {
+#if USE_M5_ATOM
     M5.begin(true, true, true);
     M5.IMU.Init();
     M5.dis.fillpix(CRGB::Blue);
-    
+#else
+    Serial.begin(115200);
+#endif    
     // define the callback function if a write message event on the characteristic occurs
     hub.setWritePortCallback(&writeValueCallback); 
     hub.start();
@@ -113,7 +129,9 @@ void setup()
 // main loop
 void loop()
 {
+#if USE_M5_ATOM
     M5.update();
+#endif
     num_run++;
 
     // if an app connects, attach some devices on the ports to signalize 
@@ -121,8 +139,10 @@ void loop()
     if (hub.isConnected && !hub.isPortInitialized)
     {
         Serial.println("Connected");
+#if USE_M5_ATOM
         M5.dis.fillpix(CRGB::Black);
-        
+#endif
+
         delay(1000);
         hub.isPortInitialized = true;
         hub.attachDevice(portA, DeviceType::MOVE_HUB_MEDIUM_LINEAR_MOTOR);
@@ -138,7 +158,9 @@ void loop()
         hub.attachDevice(portTILT, DeviceType::MOVE_HUB_TILT_SENSOR);
         delay(1000);
         
+#if USE_M5_ATOM
         M5.dis.fillpix(CRGB::Green);
+#endif
         last_ms = millis();
     }
 
@@ -147,18 +169,21 @@ void loop()
     {
         Serial.println("Disconnected");
         hub.isPortInitialized = false;
+#if USE_M5_ATOM
         M5.dis.fillpix(CRGB::Red);
+#endif
     } 
 
     // app connected
     if (hub.isConnected && hub.isPortInitialized)
     {
+#if USE_M5_ATOM
         // report button press/release
         if (M5.Btn.wasPressed())
           hub.setHubButton(true);
         if (M5.Btn.wasReleased())
           hub.setHubButton(false);
-
+#endif
     }
 
     long ms = millis();
