@@ -238,9 +238,13 @@ void loop()
     {
         active = !active;
         M5.dis.fillpix(active ? CRGB::Black : CRGB::Red);
+
+        if (! active) // stop movements
+        {
+            hub.stopBasicMotor(portA);
+            hub.stopBasicMotor(portB);
+        }
     }
-    if (! active) // stop movements
-        radius = 0;
 
     // try to connect
     if (hub.isConnecting())
@@ -289,7 +293,7 @@ void loop()
         }
     }
 
-    if (hub.isConnected())
+    if (hub.isConnected() && active)
     {
         if (radius > 10) // minimal threshold to move
         {
@@ -317,11 +321,11 @@ void loop()
     long ms = millis();
     if (ms - last_ms >= 1000)
     {
-        Serial.printf("Run %d times per second with %d updates\n", num_run, num_updates);
+        //Serial.printf("Run %d times per second with %d updates\n", num_run, num_updates);
         num_run = num_updates = 0;
         last_ms += 1000;
 
-        if (hub.isConnected())
+        if (hub.isConnected() && active)
         {
             Serial.print("RSSI: ");
             Serial.print(rssi);

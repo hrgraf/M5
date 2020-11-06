@@ -44,6 +44,7 @@ static CRGB lego_rgb[NUM_COLORS] =
 };
 #endif
 
+static bool active = false; // press AtomMatrix button to toggle
 static long last_ms = 0;
 static int num_run = 0, num_updates = 0;
 
@@ -116,8 +117,8 @@ void setup()
     M5.dis.fillpix(CRGB::Blue);
 #else
     Serial.begin(115200);
-#endif    
-    // define the callback function if a write message event on the characteristic occurs
+#endif
+    // define the callback function if a write message event on the characteristic occurs    
     hub.setWritePortCallback(&writeValueCallback); 
     hub.start();
     Serial.println("Started ESP32 Move Hub...");
@@ -153,8 +154,10 @@ void loop()
         M5.dis.fillpix(CRGB::Black);
 #endif
 
-        delay(1000);
+        delay(2000);
+        hub.setHubBatteryLevel(99);
         hub.isPortInitialized = true;
+        delay(1000);
         hub.attachDevice(portA, DeviceType::MOVE_HUB_MEDIUM_LINEAR_MOTOR);
         delay(1000);
         hub.attachDevice(portB, DeviceType::MOVE_HUB_MEDIUM_LINEAR_MOTOR);
@@ -169,7 +172,8 @@ void loop()
         delay(1000);
         
 #if USE_M5_ATOM
-        M5.dis.fillpix(CRGB::Green);
+        if (!active)
+            M5.dis.fillpix(CRGB::Red); // inactive
 #endif
         last_ms = millis();
     }
@@ -180,7 +184,7 @@ void loop()
         Serial.println("Disconnected");
         hub.isPortInitialized = false;
 #if USE_M5_ATOM
-        M5.dis.fillpix(CRGB::Red);
+        M5.dis.fillpix(CRGB::Blue);
 #endif
     } 
 
@@ -190,11 +194,16 @@ void loop()
 #if USE_M5_ATOM
         // report button press/release
         if (M5.Btn.wasPressed())
-          hub.setHubButton(true);
+        {
+            active = !active;
+            M5.dis.fillpix(active ? CRGB::Black : CRGB::Red);
+            hub.setHubButton(true);
+        }
         if (M5.Btn.wasReleased())
           hub.setHubButton(false);
 #endif
-        hub.setHubTilt(portTILT, x, y);
+        if (active)
+            hub.setHubTilt(portTILT, x, y);
     }
 
     long ms = millis();
